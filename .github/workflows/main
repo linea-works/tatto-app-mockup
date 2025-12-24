@@ -1,0 +1,57 @@
+name: Deploy Vue to GitHub Pages
+
+on:
+  # Jalan setiap ada push ke branch main
+  push:
+    branches: ["main"]
+  # Bisa dijalankan manual dari tab Actions
+  workflow_dispatch:
+
+# Izin yang dibutuhkan untuk deploy ke GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Mencegah deploy bertumpuk jika kamu push berkali-kali dengan cepat
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  # Job untuk Build (Compile)
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Folder output standar Vite adalah 'dist'
+          path: './dist'
+
+  # Job untuk Deploy ke GitHub Pages
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
